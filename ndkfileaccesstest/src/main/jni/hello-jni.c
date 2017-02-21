@@ -31,21 +31,32 @@ Java_com_logitud_ndkfileaccesstest_NDKFileAccessTest_writeToFileWithoutODirect( 
                                                   jobject thiz, jstring path )
 {
     const char *nativePath = (*env)->GetStringUTFChars(env, path, 0);
-    __android_log_print(ANDROID_LOG_INFO, TAG, "The path passed to the native c is %s, attempting to create file with open", nativePath);
+    __android_log_print(ANDROID_LOG_INFO, TAG, "-- No o_direct: The path passed to the native c is %s", nativePath);
 
     int fileWrite = open(nativePath, O_CREAT | O_RDWR);
+    int fileRead = open(nativePath, O_RDWR);
+
     __android_log_print(ANDROID_LOG_INFO, TAG, "open result fileWrite = %d", fileWrite);
+    __android_log_print(ANDROID_LOG_INFO, TAG, "open result fileRead = %d", fileRead);
 
-    if (fileWrite) {
-        ssize_t writtenBytes;
-        char bytes[1];
+    if (fileWrite != -1 && fileRead != -1) {
+        ssize_t writtenBytes, readBytes;
+        char readBuffer[1];
 
+        // Write
         writtenBytes= write(fileWrite, "a", 1);
         __android_log_print(ANDROID_LOG_INFO, TAG, "writtenBytes a = %d", writtenBytes);
 
-        close(fileWrite);
+        // Read
+        readBytes = read(fileRead, readBuffer, 1);
+        __android_log_print(ANDROID_LOG_INFO, TAG, "readBytes a = %d", readBytes);
 
-        if (writtenBytes == -1) {
+        // Close
+        close(fileWrite);
+        close(fileRead);
+
+        // Did succeed?
+        if (writtenBytes < 1 || readBytes < 1) {
             return 0x00;
         } else {
             return 0x01;
@@ -61,32 +72,42 @@ Java_com_logitud_ndkfileaccesstest_NDKFileAccessTest_writeToFileWithODirect( JNI
                                                   jobject thiz, jstring path )
 {
     const char *nativePath = (*env)->GetStringUTFChars(env, path, 0);
-    __android_log_print(ANDROID_LOG_INFO, TAG, "The path passed to the native c is %s, attempting to create file with open and O_DIRECT", nativePath);
+    __android_log_print(ANDROID_LOG_INFO, TAG, "-- O_DIRECT: The path passed to the native c is %s", nativePath);
 
     int fileWrite = open(nativePath, O_CREAT | O_RDWR | O_DIRECT);
+    int fileRead = open(nativePath, O_RDWR | O_DIRECT);
 
     __android_log_print(ANDROID_LOG_INFO, TAG, "open result fileWrite = %d", fileWrite);
+    __android_log_print(ANDROID_LOG_INFO, TAG, "open result fileRead = %d", fileRead);
 
-    if (fileWrite)
+    if (fileWrite != -1 && fileRead != -1)
     {
-        ssize_t writtenBytes;
-        char* buffer;
-        char bytes[1];
+        ssize_t writtenBytes, readBytes;
+        char* buffer, *readBuffer;
 
+        // Align Buffers
         buffer= memalign(512,512);
-        if(!buffer) {
+        readBuffer= memalign(512,512);
+
+        if(!buffer || !readBuffer) {
             __android_log_print(ANDROID_LOG_INFO, TAG, "Buffer allocation failed");
         }
 
-        memset(buffer, 0, 512);
-
+        // Write
         *buffer= 'a';
         writtenBytes= write(fileWrite, buffer, 512);
         __android_log_print(ANDROID_LOG_INFO, TAG, "writtenBytes a = %d", writtenBytes);
 
-        close(fileWrite);
+        // Read
+        readBytes = read(fileRead, readBuffer, 512);
+        __android_log_print(ANDROID_LOG_INFO, TAG, "readBytes a = %d", readBytes);
 
-        if (writtenBytes == -1) {
+        // Close
+        close(fileWrite);
+        close(fileRead);
+
+        // Did succeed?
+        if (writtenBytes < 1 || readBytes < 1) {
             return 0x00;
         } else {
             return 0x01;
@@ -111,39 +132,45 @@ Java_com_logitud_ndkfileaccesstest_NDKFileAccessTest_writeToFileWithODirect2( JN
     __android_log_print(ANDROID_LOG_INFO, TAG, "open result fileWrite = %d", fileWrite);
     __android_log_print(ANDROID_LOG_INFO, TAG, "open result fileRead = %d", fileRead);
 
-    if (fileWrite && fileRead)
+    if (fileWrite != -1 && fileRead != -1)
     {
         ssize_t writtenBytes, readBytes;
         char* buffer, *readBuffer;
-        char bytes[1];
-        int diff;
+        int diffA, diffB;
 
         buffer= memalign(512,512);
         readBuffer= memalign(512,512);
+
         if(!buffer || !readBuffer) {
             __android_log_print(ANDROID_LOG_INFO, TAG, "Buffer allocation failed");
         }
+
         memset(buffer, 0, 512);
         memset(readBuffer, 1, 512);
+
         *buffer= 'a';
         writtenBytes= write(fileWrite, buffer, 512);
         readBytes= read(fileRead, readBuffer, 512);
-        diff= memcmp(buffer, readBuffer, 512);
+        diffA = memcmp(buffer, readBuffer, 512);
         __android_log_print(ANDROID_LOG_INFO, TAG, "writtenBytes a = %d, readBytes= %d", writtenBytes, readBytes);
-        __android_log_print(ANDROID_LOG_INFO, TAG, "diff a = %d", diff);
+        __android_log_print(ANDROID_LOG_INFO, TAG, "diff a = %d", diffA);
 
         *buffer= 'b';
         writtenBytes= write(fileWrite, buffer, 512);
         readBytes= read(fileRead, readBuffer, 512);
-        diff= memcmp(buffer, readBuffer, 512);
+        diffB = memcmp(buffer, readBuffer, 512);
         __android_log_print(ANDROID_LOG_INFO, TAG, "writtenBytes a = %d, readBytes= %d", writtenBytes, readBytes);
-        __android_log_print(ANDROID_LOG_INFO, TAG, "diff b = %d", diff);
-
+        __android_log_print(ANDROID_LOG_INFO, TAG, "diff b = %d", diffB);
 
         close(fileWrite);
         close(fileRead);
 
-        return 0x01;
+        if (diffA == 0 && diffB == 0) {
+            return 0x01;
+        } else {
+            return 0x00;
+        }
+
     } else {
         return 0x00;
     }

@@ -9,7 +9,7 @@ public class NDKFileAccessTest {
     }
 
     static {
-        System.loadLibrary("NDKFileAccessTest");
+        System.loadLibrary("hello-jni");
     }
 
     public native char writeToFileWithODirect(String path);

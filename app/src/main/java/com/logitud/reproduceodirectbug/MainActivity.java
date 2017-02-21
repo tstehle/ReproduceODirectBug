@@ -33,9 +33,15 @@ public class MainActivity extends ActionBarActivity {
         ForegroundColorSpan errorSpanColor = new ForegroundColorSpan(getResources().getColor(R.color.DarkRed));
 
         // UI
-        String absolutePathOfExternalSD = getAbsolutePathOfExternalSD();
         tv = (TextView) findViewById(R.id.tv);
-        tv.setText("\n");
+        tv.setText("");
+
+        // Path
+        String absolutePathOfExternalSD = getAbsolutePathOfExternalSD();
+        if (absolutePathOfExternalSD.isEmpty()) {
+            tv.append("External SD not found!");
+            return;
+        }
 
         // Log path
         tv.append("\nWe think that the path of the app directory on the external SdCard is:\n");
@@ -94,7 +100,7 @@ public class MainActivity extends ActionBarActivity {
                 if (file[1] != null)
                     cardPath = file[1].getAbsolutePath();
                 else
-                    cardPath = ""; //Not insert SD Card
+                    cardPath = "";
             } else
                 cardPath = file[0].getAbsolutePath();
         } else {
